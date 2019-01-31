@@ -315,9 +315,9 @@ local cm_defaultVars = {
 }
 
 local function cm_onChatMessage(channelID, from, text, isCustomerService, fromDisplayName)
-	local lfrom = string.lower(from)
+	local lfrom = string.lower(fromDisplayName)
 	if isCustomerService == false then
-		if cm_savedVariables.selfsend or lfrom == cm_lplayerAt or lfrom == cm_lplayerName then
+		if cm_savedVariables.selfsend == true or (lfrom ~= "" and lfrom ~= nil and lfrom ~= cm_lplayerAt) then
 			local origtext = text
 			for k,v in pairs(cm_regexes) do
 				text = string.gsub(text, v, k)
