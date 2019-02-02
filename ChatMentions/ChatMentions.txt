@@ -1,15 +1,14 @@
 ## DisableSavedVariablesAutoSaving 0
 ## Title: ChatMentions
 ## Description: Make it clearer when you're called out in chat by capitalizing your name and dinging.
-## Version: 1.1
+## Version: 1.2
 ## APIVersion: 100025 100026 100027
 ## Author: @Coorbin
 ## SavedVariables: ChatMentionsDB
-## OptionalDependsOn: LibStub libGarfield libChat3 LibAddonMenu-2.0
+## DependsOn: LibStub libChat3 libGarfield LibAddonMenu-2.0
+## OptionalDependsOn: LibStub
 
-Libs/LibStub/LibStub.lua
-Libs/libGarfield/libGarfield.lua
-Libs/libChat3/libChat3.lua
+; Garfield
 Libs/LibAddonMenu-2.0/LibAddonMenu-2.0.lua
 
 ChatMentions.lua
