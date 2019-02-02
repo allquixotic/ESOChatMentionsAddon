@@ -111,7 +111,7 @@ local function cm_loadRegexes()
 			table.insert(keyBuild, "|t100%%:100%%:ChatMentions/dds/excl3.dds|t")
 		end
 		if pChat == nil and cm_savedVariables["underline"] == true then
-			table.insert(keyBuild, "|l0:1:1:0:1:000000|l")
+			table.insert(keyBuild, "|L0:1:2:1:1:ffffff|l")
 		end
 		if cm_savedVariables["changeColor"] == true then
 			table.insert(keyBuild, "|c")
