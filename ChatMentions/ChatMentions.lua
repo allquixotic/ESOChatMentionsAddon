@@ -46,12 +46,20 @@ local function cm_convertRGBToHex(r, g, b)
 	return string.format("%.2x%.2x%.2x", zo_floor(r * 255), zo_floor(g * 255), zo_floor(b * 255))
 end
 
+local function cm_containsWholeWord(input, word)
+	return input:gsub('%a+', ' %1 '):match(' (' .. word .. ') ') ~= nil
+end
+
 -- Convert a colour from "ABCDEF" form to [0,1] RGB form.
 local function cm_convertHexToRGBA(colourString)
 	local r=tonumber(string.sub(colourString, 3-2, 4-2), 16) or 255
 	local g=tonumber(string.sub(colourString, 5-2, 6-2), 16) or 255
 	local b=tonumber(string.sub(colourString, 7-2, 8-2), 16) or 255
 	return r/255, g/255, b/255, 1
+end
+
+local function cm_startsWith(str, start)
+   return str:sub(1, #start) == start
 end
 
 local function cm_convertHexToRGBAPacked(colourString)
@@ -86,6 +94,11 @@ local function cm_list()
 	local splitted = {}
 	if cm_savedVariables.selfchar == true then
 		splitted = cm_split(cm_playerName)
+		if cm_savedVariables.wholenames == true then
+			for l,m in pairs(splitted) do
+				splitted[l] = "!" .. m
+			end
+		end
 	end
 	if cm_savedVariables.extras ~= nil then
 		for line in cm_savedVariables.extras:gmatch("[^\r\n]+") do
@@ -111,16 +124,16 @@ local function cm_loadRegexes()
 			table.insert(keyBuild, "|t100%%:100%%:ChatMentions/dds/excl3.dds|t")
 		end
 		if pChat == nil and cm_savedVariables["underline"] == true then
-			table.insert(keyBuild, "|L0:1:2:1:1:ffffff|l")
+			table.insert(keyBuild, "|l0:1:1:0:1:000000|l")
 		end
 		if cm_savedVariables["changeColor"] == true then
 			table.insert(keyBuild, "|c")
 			table.insert(keyBuild, cm_savedVariables["color"])
 		end
 		if cm_savedVariables["capitalize"] == true then
-			table.insert(keyBuild, string.upper(v))
+			table.insert(keyBuild, string.upper(string.gsub(v, "!", "")))
 		else
-			table.insert(keyBuild, v)
+			table.insert(keyBuild, string.gsub(v, "!", ""))
 		end
 		if cm_savedVariables["changeColor"] == true then
 			table.insert(keyBuild, "|r")
@@ -244,7 +257,7 @@ local cm_optionsData = {
 	{
 		type = "editbox",
 		name = "Extra names to ping on (newline per name)",
-		tooltip = "A newline-separated list of additional names to ping you on. Press ENTER to make new lines.",
+		tooltip = "A newline-separated list of additional names to ping you on. Press ENTER to make new lines. If you put an `!` (exclamation mark) in front of a custom name you'd like to monitor, it will only notify you if that name occurs on a word boundary. For example, if you add '!de' to your Extras list, you'd be notified for 'de nada' but not 'delicatessen'. If you just added 'de' to your Extras list, you'd be notified for 'delicatessen' also.",
 		getFunc = function()
 			return cm_savedVariables.extras
 		end,
@@ -297,7 +310,22 @@ local cm_optionsData = {
 			cm_yo()
 			cm_loadRegexes()
 		end,
-		tooltip = "Whether or not to apply formatting to each name in your character name. Disable if you use a very common name like 'Me' in your character name.",
+		tooltip = "Whether or not to apply formatting to each name (separated by spaces) in your character name. Disable if you use a very common name like 'Me' in your character name.",
+		default = true,
+		width = "full",
+	},
+	{
+		type = "checkbox",
+		name = "Match your names as whole words only?",
+		getFunc = function() 
+			return cm_savedVariables.wholenames
+		end,
+		setFunc = function(var) 
+			cm_savedVariables.wholenames = var
+			cm_yo()
+			cm_loadRegexes()
+		end,
+		tooltip = "Whether or not to match your character names as whole words only. If you have a very short name in your character name, you may want to turn this on.",
 		default = true,
 		width = "full",
 	},
@@ -312,6 +340,7 @@ local cm_defaultVars = {
 	selfsend = false,
 	ding = true,
 	selfchar = true,
+	wholenames = true,
 }
 
 local function cm_onChatMessage(channelID, from, text, isCustomerService, fromDisplayName)
@@ -320,12 +349,25 @@ local function cm_onChatMessage(channelID, from, text, isCustomerService, fromDi
 		if cm_savedVariables.selfsend == true or (lfrom ~= "" and lfrom ~= nil and lfrom ~= cm_lplayerAt) then
 			local origtext = text
 			for k,v in pairs(cm_regexes) do
-				text = string.gsub(text, v, k)
-				if origtext ~= text then
-					if cm_savedVariables.ding == true then
-						PlaySound(SOUNDS.NEW_NOTIFICATION)
+				if cm_startsWith(v, "!") then 
+					v = string.sub(v,2)
+					if cm_containsWholeWord(text, v) then
+						text = string.gsub(text, v, k)
+						if origtext ~= text then
+							if cm_savedVariables.ding == true then
+								PlaySound(SOUNDS.NEW_NOTIFICATION)
+							end
+							return text
+						end
 					end
-					return text
+				else
+					text = string.gsub(text, v, k)
+					if origtext ~= text then
+						if cm_savedVariables.ding == true then
+							PlaySound(SOUNDS.NEW_NOTIFICATION)
+						end
+						return text
+					end
 				end
 			end
 		end

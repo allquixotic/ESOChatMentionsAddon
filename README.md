@@ -10,6 +10,10 @@ This addon can perform any of the following actions whenever your name (or part 
 
 Most of the configuration is documented by pressing `ESC`, go to `Settings`, `Addons`, then `ChatMentions`. Hover over configuration items for detailed usage details in a tooltip.
 
+If you put an `!` (exclamation mark) in front of a custom name you'd like to monitor, it will only notify you if that name occurs on a "word boundary".
+For example, if you add "!de" to your Extras list, you'd be notified for "de nada" but not "delicatessen". 
+If you just added "de" to your Extras list, you'd be notified for "delicatessen" also.
+
 However, there are three chat commands:
 
  - `/cmadd <name>` - Add `name` to the *temporary* list of extra names to ping on. This list is deleted when your client exits, when you type `/reloadui`, or possibly when you zone.
