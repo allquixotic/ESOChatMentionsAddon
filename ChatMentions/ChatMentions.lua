@@ -133,7 +133,7 @@ local function cm_loadRegexes()
 		if cm_savedVariables["capitalize"] == true then
 			table.insert(keyBuild, string.upper(string.gsub(v, "!", "")))
 		else
-			table.insert(keyBuild, string.gsub(v, "!", ""))
+			table.insert(keyBuild, tostring(string.gsub(v, "!", "")))
 		end
 		if cm_savedVariables["changeColor"] == true then
 			table.insert(keyBuild, "|r")
