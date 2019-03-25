@@ -64,9 +64,7 @@ local function libGarfield_OnPlayerActivated(eventCode, initial)
 		return message, saveTarget, displayName, text 
 	end)
 
-	if warningsChanged ~= "" then
-		d("Prov's libGarfield:\n" .. warningsChanged)
-	end
+	EVENT_MANAGER:UnregisterForEvent("libGarfield", EVENT_ADD_ON_LOADED)
 end
 
 EVENT_MANAGER:RegisterForEvent("libGarfield", EVENT_ADD_ON_LOADED, libGarfield_OnAddOnLoad)
