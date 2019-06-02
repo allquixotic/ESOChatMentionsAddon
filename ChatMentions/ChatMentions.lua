@@ -11,6 +11,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 local LCHAT = LibStub("libChat-1.0")
 local LAM = LibStub("LibAddonMenu-2.0")
+local LCM = LibStub:GetLibrary("LibCustomMenu")
 
 local cm_name = "ChatMentions"
 local cm_playerName = GetUnitName("player")
@@ -19,6 +20,7 @@ local cm_playerAt = GetUnitDisplayName("player")
 local cm_lplayerAt = string.lower(cm_playerAt)
 local cm_regexes = {}
 local cm_savedVarsName = "ChatMentionsDB"
+local cm_watches = {}
 local cm_panelData = {
 	type = "panel",
 	name = cm_name,
@@ -115,33 +117,50 @@ local function cm_print_list()
 	d(cm_list())
 end
 
+local function cm_decorateText(origText, useRegSyntax)
+	local keyBuild = {}
+	if cm_savedVariables["excl"] == true then
+		if useRegSyntax == true then
+			table.insert(keyBuild, "|t100%%:100%%:ChatMentions/dds/excl3.dds|t")
+		else
+			table.insert(keyBuild, "|t100%:100%:ChatMentions/dds/excl3.dds|t")
+		end
+	end
+	if pChat == nil and cm_savedVariables["underline"] == true then
+		table.insert(keyBuild, "|l0:1:1:0:1:000000|l")
+	end
+	if cm_savedVariables["changeColor"] == true then
+		table.insert(keyBuild, "|c")
+		table.insert(keyBuild, cm_savedVariables["color"])
+	end
+	local upperProcStr = ""
+	if useRegSyntax == true then
+		upperProcStr = string.gsub(origText, "!", "")
+	else
+		upperProcStr = origText
+	end
+	--d("upperProcStr: " .. upperProcStr)
+	if cm_savedVariables["capitalize"] == true then
+		table.insert(keyBuild, string.upper(upperProcStr))
+	else
+		table.insert(keyBuild, tostring(upperProcStr))
+	end
+	if cm_savedVariables["changeColor"] == true then
+		table.insert(keyBuild, "|r")
+	end
+	if pChat == nil and cm_savedVariables["underline"] == true then
+		table.insert(keyBuild, "|l")
+	end
+	local retval = table.concat(keyBuild, "")
+	--d("Decorated to " .. retval)
+	return retval
+end
+
 local function cm_loadRegexes()
 	local splitted = cm_list()
 	cm_regexes = {}
 	for k,v in pairs(splitted) do
-		local keyBuild = {}
-		if cm_savedVariables["excl"] == true then
-			table.insert(keyBuild, "|t100%%:100%%:ChatMentions/dds/excl3.dds|t")
-		end
-		if pChat == nil and cm_savedVariables["underline"] == true then
-			table.insert(keyBuild, "|l0:1:1:0:1:000000|l")
-		end
-		if cm_savedVariables["changeColor"] == true then
-			table.insert(keyBuild, "|c")
-			table.insert(keyBuild, cm_savedVariables["color"])
-		end
-		if cm_savedVariables["capitalize"] == true then
-			table.insert(keyBuild, string.upper(string.gsub(v, "!", "")))
-		else
-			table.insert(keyBuild, tostring(string.gsub(v, "!", "")))
-		end
-		if cm_savedVariables["changeColor"] == true then
-			table.insert(keyBuild, "|r")
-		end
-		if pChat == nil and cm_savedVariables["underline"] == true then
-			table.insert(keyBuild, "|l")
-		end
-		cm_regexes[table.concat(keyBuild, "")] = cm_nocase(v)
+		cm_regexes[cm_decorateText(v, true)] = cm_nocase(v)
 	end
 end
 
@@ -343,17 +362,71 @@ local cm_defaultVars = {
 	wholenames = true,
 }
 
+local function cm_isWatched(playerName, rawName)
+	playerName = string.lower(playerName)
+	rawName = string.lower(rawName)
+	return (cm_watches[playerName] ~= nil and cm_watches[playerName] == true) or (cm_watches[rawName] ~= nil and cm_watches[rawName] == true)
+end
+
+local function cm_correctCase(origtext, text, v)
+	if cm_savedVariables["capitalize"] ~= true then
+		local i, j, k, l
+		i = 0
+		j = 0
+		k = 0
+		l = 0
+		--local n = 1
+		while true do
+			--d("Before: iteration #" .. n .. ": " .. i .. "," .. j .. "," .. k .. "," .. l)
+			i, j = string.find(origtext, v, i)
+			k, l = string.find(text, v, k)
+			if i == nil or k == nil then 
+				--d("Done on " .. n)
+				break 
+			end
+			--d("After: iteration #" .. n .. ": " .. i .. "," .. j .. "," .. k .. "," .. l)
+			local origCasing = string.sub(origtext, i, j)
+			local newCasing = string.sub(text, k, l)
+			if k > 1 then
+				if string.len(text) > l then
+					--d("Case 1")
+					text = string.sub(text, 1, k-1) .. origCasing .. string.sub(text, l+1)
+				else
+					--d("Case 2")
+					text = string.sub(text, 1, k-1) .. origCasing
+				end
+			else
+				if string.len(text) > l then
+					--d("Case 3")
+					text = origCasing .. string.sub(text, l+1)
+				else
+					--d("Case 4")
+					text = origCasing
+				end
+			end
+			i = j
+			k = l
+			--n = n + 1
+		end
+	end
+	return text
+end
+
 local function cm_onChatMessage(channelID, from, text, isCustomerService, fromDisplayName)
 	local lfrom = string.lower(fromDisplayName)
 	if isCustomerService == false then
+		--d("I think it's from " .. lfrom)
 		if cm_savedVariables.selfsend == true or (lfrom ~= "" and lfrom ~= nil and lfrom ~= cm_lplayerAt) then
 			local origtext = text
+			local matched = false
 			for k,v in pairs(cm_regexes) do
 				if cm_startsWith(v, "!") then 
 					v = string.sub(v,2)
 					if cm_containsWholeWord(text, v) then
 						text = string.gsub(text, v, k)
 						if origtext ~= text then
+							text = cm_correctCase(origtext, text, v)
+							matched = true
 							if cm_savedVariables.ding == true then
 								PlaySound(SOUNDS.NEW_NOTIFICATION)
 							end
@@ -363,12 +436,18 @@ local function cm_onChatMessage(channelID, from, text, isCustomerService, fromDi
 				else
 					text = string.gsub(text, v, k)
 					if origtext ~= text then
+						text = cm_correctCase(origtext, text, v)
+						matched = true
 						if cm_savedVariables.ding == true then
 							PlaySound(SOUNDS.NEW_NOTIFICATION)
 						end
 						return text
 					end
 				end
+			end
+			if matched == false and cm_isWatched(lfrom, lfrom) then
+				--d("Decorating original text " .. origtext)
+				text = cm_decorateText(origtext, false)
 			end
 		end
 	end
@@ -401,6 +480,56 @@ local function cm_del(argu)
 	end
 end
 
+local function cm_onWatchToggle(playerName, rawName)
+	playerName = string.lower(playerName)
+	rawName = string.lower(rawName)
+	local isWat = cm_isWatched(playerName, rawName)
+
+	if isWat then
+		cm_watches[playerName] = false
+		cm_watches[rawName] = false
+	else
+		cm_watches[playerName] = true
+		cm_watches[rawName] = true
+	end
+end
+
+-- Replace context menu functions to add in custom menu item.
+local ZO_ShowPlayerContextMenu = SharedChatSystem.ShowPlayerContextMenu
+function SharedChatSystem.ShowPlayerContextMenu(...)
+	local ZO_ClearMenu = ClearMenu
+	local ZO_ShowMenu = ShowMenu
+
+	if not ZO_Dialogs_IsShowingDialog() then
+		local chat, playerName, rawName = ...
+		function ClearMenu(...)
+			ClearMenu = ZO_ClearMenu
+			ClearMenu(...)
+			-- Insert items before
+		end
+		function ShowMenu(...)
+			ShowMenu = ZO_ShowMenu
+			if cm_isWatched(playerName, rawName) then
+				AddCustomMenuItem("Un-watch", function() cm_onWatchToggle(playerName, rawName) end)
+			else
+				AddCustomMenuItem("Watch", function() cm_onWatchToggle(playerName, rawName) end)
+			end
+			return ShowMenu(...)
+		end
+	end
+	return ZO_ShowPlayerContextMenu(...)
+end
+
+local function cm_watch_toggle(argu) 
+	cm_onWatchToggle(argu, argu)
+	local isWat = cm_isWatched(argu, argu)
+	if isWat then
+		d("Watch is ENABLED for " .. argu)
+	else
+		d("Watch is DISABLED for " .. argu)
+	end
+end
+
 local function cm_OnAddOnLoaded(event, addonName)
 	if addonName == cm_name then
 		EVENT_MANAGER:UnregisterForEvent(cm_name, EVENT_ADD_ON_LOADED)
@@ -413,6 +542,7 @@ local function cm_OnAddOnLoaded(event, addonName)
 		SLASH_COMMANDS["/cmadd"] = cm_add
 		SLASH_COMMANDS["/cmdel"] = cm_del
 		SLASH_COMMANDS["/cmlist"] = cm_print_list
+		SLASH_COMMANDS["/cmwatch"] = cm_watch_toggle
 		LCHAT:registerText(cm_onChatMessage, cm_name)
 	end
 end
