@@ -8,7 +8,14 @@ This addon can perform any of the following actions whenever your name (or part 
  - It can add an exclamation point icon next to your name.
  - (If pChat is disabled) It can underline your name.
  
+ IMPORTANT, PLEASE READ!! Version 2.0 and up **REQUIRES** that you **separately** install (via Minion, or downloading from esoui.com) the following libraries:
+ - LibAddonMenu
+ - LibStub
+ - LibCustomMenu
+ 
  **Version 2.0 (June 2019)**: Added support to "Watch" the messages of a user, which will highlight messages sent by someone else whether or not they mention you! This can be enabled by right-clicking a name in the chat window, *or* by typing `/cmwatch` followed by the user's @handle. Note that you may need to use `/cmwatch Character Name` instead of @handle if the watched user is not your friend or in any of your guilds.
+ 
+Version 2.0 also fixes the case (capital/lowercase) of mentioned words when you have the Capitalize option off. Now the original casing will be preserved.
 
 Most of the configuration is documented by pressing `ESC`, go to `Settings`, `Addons`, then `ChatMentions`. Hover over configuration items for detailed usage details in a tooltip.
 
