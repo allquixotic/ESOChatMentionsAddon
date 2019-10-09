@@ -186,6 +186,10 @@ function libchat:MessageChannelReceiver(channelID, from, text, isCustomerService
 		end
 	end
 
+	--This is from chathandlers.lua
+	from = zo_strformat(SI_CHAT_MESSAGE_PLAYER_FORMATTER, from)
+	--End chathandlers.lua
+
 	-- Function to affect From
 	for _, func in ipairs(storage.parser.Name) do
 		from = func(channelID, from, isCustomerService, fromDisplayName)
@@ -197,7 +201,7 @@ function libchat:MessageChannelReceiver(channelID, from, text, isCustomerService
 		text = func(channelID, from, text, isCustomerService, fromDisplayName)
 	end
 	if not text then return end
-	
+
 	-- Function to format message
 	if storage.parser.Format then
 		message = storage.parser.Format(channelID, from, text, isCustomerService, fromDisplayName, originalFrom, originalText, output.BeforeAll.DDS, output.BeforeAll.Text, output.BeforeSender.DDS, output.BeforeSender.Text, output.AfterSender.Text, output.AfterSender.DDS, output.BeforeText.DDS, output.BeforeText.Text, output.AfterText.Text, output.AfterText.DDS)
@@ -222,12 +226,16 @@ function libchat:MessageChannelReceiver(channelID, from, text, isCustomerService
 		end
 		
 		text = output.BeforeText.DDS .. output.BeforeText.Text .. text .. output.AfterText.Text .. output.AfterText.DDS
-		
+
 		-- Create default formatting
 		if channelLink then
-			message = output.BeforeAll.DDS .. output.BeforeAll.Text .. zo_strformat(info.format, channelLink, playerLink, text)
+			message = output.BeforeAll.DDS .. output.BeforeAll.Text .. string.format(GetString(info.format), channelLink, playerLink, text)
 		else
-			message = output.BeforeAll.DDS .. output.BeforeAll.Text .. zo_strformat(info.format, playerLink, text, showCustomerService(isCustomerService))
+			if info.supportCSIcon then
+				message = output.BeforeAll.DDS .. output.BeforeAll.Text .. string.format(GetString(info.format), showCustomerService(isCustomerService), playerLink, text)
+			else
+				message = output.BeforeAll.DDS .. output.BeforeAll.Text .. string.format(GetString(info.format), playerLink, text)
+			end
 		end
 	end
 	
